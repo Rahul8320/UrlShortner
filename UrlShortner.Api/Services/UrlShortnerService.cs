@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Hybrid;
 using MySqlConnector;
 using System.Security.Cryptography;
 using UrlShortner.Api.Services.Interface;
@@ -7,7 +8,10 @@ using UrlShortner.Domain.Model;
 
 namespace UrlShortner.Api.Services;
 
-internal sealed class UrlShortnerService(AppDbContext context, ILogger<UrlShortnerService> logger) : IUrlShortnerService
+internal sealed class UrlShortnerService(
+    AppDbContext context, 
+    HybridCache hybridCache,
+    ILogger<UrlShortnerService> logger) : IUrlShortnerService
 {
     private const int MaxRetries = 3;
 
@@ -20,9 +24,14 @@ internal sealed class UrlShortnerService(AppDbContext context, ILogger<UrlShortn
 
     public async Task<string?> GetOriginalUrl(string shortCode)
     {
-        var shortenUrl = await context.ShortenedUrls.Where(u => u.ShortCode == shortCode).FirstOrDefaultAsync();
+        var originalUrl = await hybridCache.GetOrCreateAsync(shortCode, async token =>
+        {
+            var shortenUrl = await context.ShortenedUrls.Where(u => u.ShortCode == shortCode).FirstOrDefaultAsync(token);
 
-        return shortenUrl?.OriginalUrl;
+            return shortenUrl?.OriginalUrl ?? null;
+        });
+
+        return originalUrl;
     }
 
     public async Task<string> ShortenUrl(string originalUrl)
@@ -36,6 +45,8 @@ internal sealed class UrlShortnerService(AppDbContext context, ILogger<UrlShortn
 
                 await context.ShortenedUrls.AddAsync(shortenUrl);
                 await context.SaveChangesAsync();
+
+                await hybridCache.SetAsync(shortCode, originalUrl);
 
                 return shortCode;
             }
