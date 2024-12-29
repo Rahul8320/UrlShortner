@@ -1,5 +1,6 @@
 using UrlShortner.Api.Services;
 using UrlShortner.Api.Services.Interface;
+using UrlShortner.Domain;
 using UrlShortner.Domain.Data;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -28,6 +29,7 @@ app.MapDefaultEndpoints();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
+    app.Services.ApplyMigration();
     app.MapOpenApi();
 }
 

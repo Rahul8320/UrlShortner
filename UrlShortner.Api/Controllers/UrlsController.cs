@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using UrlShortner.Api.Model;
 using UrlShortner.Api.Services.Interface;
 
 namespace UrlShortner.Api.Controllers;
@@ -9,16 +10,16 @@ public class UrlsController(IUrlShortnerService urlShortnerService, ILogger<Urls
 {
     [HttpPost]
     [Route("shorten")]
-    public async Task<IResult> Shorten([FromBody] string url)
+    public async Task<IResult> Shorten([FromBody] UrlRequest request)
     {
         try
         {
-            if (Uri.TryCreate(url, UriKind.Absolute, out _) == false)
+            if (Uri.TryCreate(request.Url, UriKind.Absolute, out _) == false)
             {
                 return Results.BadRequest("Invalid URL format");
             }
 
-            var shortcode = await urlShortnerService.ShortenUrl(url);
+            var shortcode = await urlShortnerService.ShortenUrl(request.Url);
 
             return Results.Ok(new { shortcode });
         }
