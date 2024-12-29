@@ -10,6 +10,9 @@ builder.AddServiceDefaults();
 builder.AddMySqlDbContext<AppDbContext>(connectionName: "url-shortener");
 builder.AddRedisDistributedCache("redis");
 
+builder.Services.AddOpenTelemetry()
+    .WithMetrics(metric => metric.AddMeter("UrlShortner.Api"));
+
 #pragma warning disable EXTEXP0018 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 builder.Services.AddHybridCache();
 #pragma warning restore EXTEXP0018 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
@@ -18,6 +21,7 @@ builder.Services.AddHybridCache();
 builder.Services.AddControllers();
 
 builder.Services.AddScoped<IUrlShortnerService, UrlShortnerService>();
+builder.Services.AddHttpContextAccessor();
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();

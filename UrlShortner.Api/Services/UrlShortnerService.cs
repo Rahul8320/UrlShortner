@@ -1,6 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
 using MySqlConnector;
+using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using System.Security.Cryptography;
 using UrlShortner.Api.Services.Interface;
 using UrlShortner.Domain.Data;
@@ -9,15 +11,24 @@ using UrlShortner.Domain.Model;
 namespace UrlShortner.Api.Services;
 
 internal sealed class UrlShortnerService(
-    AppDbContext context, 
+    AppDbContext dbContext, 
     HybridCache hybridCache,
+    IHttpContextAccessor httpContextAccessor,
     ILogger<UrlShortnerService> logger) : IUrlShortnerService
 {
     private const int MaxRetries = 3;
 
+    private static readonly Meter Meter = new("UrlShortner.Api");
+    private static readonly Counter<int> RedirectsCounter = Meter.CreateCounter<int>(
+        "url_shortner.redirects", 
+        "The number of successfull redirects");
+    private static readonly Counter<int> FailedRedirectsCounter = Meter.CreateCounter<int>(
+        "url_shortner.failed_redirects",
+        "The number of failed redirects");
+
     public async Task<IEnumerable<ShortenedUrl>> GetAllUrls()
     {
-        var allUrls = await context.ShortenedUrls.OrderByDescending(u => u.CreateAt).ToListAsync();
+        var allUrls = await dbContext.ShortenedUrls.OrderByDescending(u => u.CreateAt).ToListAsync();
 
         return allUrls;
     }
@@ -26,10 +37,21 @@ internal sealed class UrlShortnerService(
     {
         var originalUrl = await hybridCache.GetOrCreateAsync(shortCode, async token =>
         {
-            var shortenUrl = await context.ShortenedUrls.Where(u => u.ShortCode == shortCode).FirstOrDefaultAsync(token);
+            var shortenUrl = await dbContext.ShortenedUrls.Where(u => u.ShortCode == shortCode).FirstOrDefaultAsync(token);
 
-            return shortenUrl?.OriginalUrl ?? null;
+            return shortenUrl?.OriginalUrl;
         });
+
+        if(originalUrl is null)
+        {
+            FailedRedirectsCounter.Add(1, new TagList { { "short_code", shortCode} });
+        }
+        else
+        {
+            await RecordVisit(shortCode);
+
+            RedirectsCounter.Add(1, new TagList { { "short_code", shortCode } });
+        }
 
         return originalUrl;
     }
@@ -43,8 +65,8 @@ internal sealed class UrlShortnerService(
                 var shortCode = GenerateRandomCode();
                 var shortenUrl = new ShortenedUrl(originalUrl: originalUrl, shortCode: shortCode);
 
-                await context.ShortenedUrls.AddAsync(shortenUrl);
-                await context.SaveChangesAsync();
+                await dbContext.ShortenedUrls.AddAsync(shortenUrl);
+                await dbContext.SaveChangesAsync();
 
                 await hybridCache.SetAsync(shortCode, originalUrl);
 
@@ -83,5 +105,25 @@ internal sealed class UrlShortnerService(
         }
 
         return new string(result);
+    }
+
+    private async Task RecordVisit(string shortCode)
+    {
+        var httpContext = httpContextAccessor.HttpContext;
+        var userAgent = httpContext?.Request.Headers.UserAgent.ToString();
+        var referer = httpContext?.Request.Headers.Referer.ToString();
+
+        var shortenUrl = await dbContext.ShortenedUrls.Where(u => u.ShortCode == shortCode).FirstOrDefaultAsync();
+
+        var urlVisit = new UrlVisit()
+        {
+            Referer = referer ?? "Default",
+            UserAgent = userAgent ?? "Default",
+            ShortCode = shortCode,
+            ShortenedUrlId = shortenUrl!.Id
+        };
+
+        await dbContext.UrlVisits.AddAsync(urlVisit);
+        await dbContext.SaveChangesAsync();
     }
 }
