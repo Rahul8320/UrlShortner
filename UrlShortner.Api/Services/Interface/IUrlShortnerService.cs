@@ -1,4 +1,4 @@
-﻿using UrlShortner.Api.Data.Model;
+﻿using UrlShortner.Domain.Model;
 
 namespace UrlShortner.Api.Services.Interface;
 

@@ -1,9 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using MySqlConnector;
 using System.Security.Cryptography;
-using UrlShortner.Api.Data;
-using UrlShortner.Api.Data.Model;
 using UrlShortner.Api.Services.Interface;
+using UrlShortner.Domain.Data;
+using UrlShortner.Domain.Model;
 
 namespace UrlShortner.Api.Services;
 

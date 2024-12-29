@@ -1,9 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using UrlShortner.Api.Data.Model;
+using UrlShortner.Domain.Model;
 
-namespace UrlShortner.Api.Data;
+namespace UrlShortner.Domain.Data;
 
-internal sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
+public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
     public DbSet<ShortenedUrl> ShortenedUrls { get; set; }
     public DbSet<UrlVisit> UrlVisits { get; set; }
@@ -18,7 +18,7 @@ internal sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbC
         modelBuilder.Entity<UrlVisit>()
             .HasOne(su => su.ShortenedUrl)
             .WithMany()
-            .HasForeignKey(uv => uv.ShortCode)
+            .HasForeignKey(uv => uv.ShortenedUrlId)
             .IsRequired()
             .OnDelete(DeleteBehavior.Cascade);
 

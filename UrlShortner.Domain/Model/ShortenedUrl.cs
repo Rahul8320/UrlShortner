@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace UrlShortner.Api.Data.Model;
+namespace UrlShortner.Domain.Model;
 
 public sealed class ShortenedUrl(string originalUrl, string shortCode)
 {

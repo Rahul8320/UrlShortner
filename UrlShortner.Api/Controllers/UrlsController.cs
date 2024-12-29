@@ -41,7 +41,7 @@ public class UrlsController(IUrlShortnerService urlShortnerService, ILogger<Urls
         }
         catch (Exception ex)
         {
-            logger.LogError(message: ex.Message, args: ex);
+            logger.LogError(ex, ex.Message);
             return Results.InternalServerError(ex.Message);
         }
     }
@@ -57,7 +57,7 @@ public class UrlsController(IUrlShortnerService urlShortnerService, ILogger<Urls
         }
         catch (Exception ex)
         {
-            logger.LogError(message: ex.Message, args: ex);
+            logger.LogError(ex, ex.Message);
             return Results.InternalServerError(ex.Message);
         }
     }
