@@ -1,9 +1,16 @@
+using UrlShortner.Api.Data;
+using UrlShortner.Api.Services;
+using UrlShortner.Api.Services.Interface;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 
 // Add services to the container.
 builder.Services.AddControllers();
+
+builder.Services.AddDbContext<AppDbContext>();
+builder.Services.AddScoped<IUrlShortnerService, UrlShortnerService>();
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
