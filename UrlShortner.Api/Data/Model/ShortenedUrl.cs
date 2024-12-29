@@ -2,13 +2,13 @@
 
 namespace UrlShortner.Api.Data.Model;
 
-internal sealed class ShortenedUrl
+public sealed class ShortenedUrl(string originalUrl, string shortCode)
 {
     [Key]
     public int Id { get; set; }
     [Required]
-    public string ShortCode { get; set; } = string.Empty;
+    public string ShortCode { get; set; } = shortCode;
     [Required]
-    public string OriginalUrl { get; set; } = string.Empty;
+    public string OriginalUrl { get; set; } = originalUrl;
     public DateTime CreateAt { get; set; } = DateTime.UtcNow;
 }

@@ -1,22 +1,76 @@
-﻿using UrlShortner.Api.Data.Model;
+﻿using Microsoft.EntityFrameworkCore;
+using MySqlConnector;
+using System.Security.Cryptography;
+using UrlShortner.Api.Data;
+using UrlShortner.Api.Data.Model;
 using UrlShortner.Api.Services.Interface;
 
 namespace UrlShortner.Api.Services;
 
-internal sealed class UrlShortnerService : IUrlShortnerService
+internal sealed class UrlShortnerService(AppDbContext context, ILogger<UrlShortnerService> logger) : IUrlShortnerService
 {
-    public Task<IEnumerable<ShortenedUrl>> GetAllUrls()
+    private const int MaxRetries = 3;
+
+    public async Task<IEnumerable<ShortenedUrl>> GetAllUrls()
     {
-        throw new NotImplementedException();
+        var allUrls = await context.ShortenedUrls.OrderByDescending(u => u.CreateAt).ToListAsync();
+
+        return allUrls;
     }
 
-    public Task<string?> GetOriginalUrl(string shortCode)
+    public async Task<string?> GetOriginalUrl(string shortCode)
     {
-        throw new NotImplementedException();
+        var shortenUrl = await context.ShortenedUrls.Where(u => u.ShortCode == shortCode).FirstOrDefaultAsync();
+
+        return shortenUrl?.OriginalUrl;
     }
 
-    public Task<string> ShortenUrl(string originalUrl)
+    public async Task<string> ShortenUrl(string originalUrl)
     {
-        throw new NotImplementedException();
+        for (int attemp = 0; attemp < MaxRetries; attemp++)
+        {
+            try
+            {
+                var shortCode = GenerateRandomCode();
+                var shortenUrl = new ShortenedUrl(originalUrl: originalUrl, shortCode: shortCode);
+
+                await context.ShortenedUrls.AddAsync(shortenUrl);
+                await context.SaveChangesAsync();
+
+                return shortCode;
+            }
+            catch (MySqlException ex) when (ex.SqlState == MySqlErrorCode.DuplicateUnique.ToString())
+            {
+                if(attemp == MaxRetries)
+                {
+                    logger.LogError(ex, $"Failed to generate unique short code after {MaxRetries} attempts");
+
+                    throw new InvalidOperationException("Failed to generate unique short code", ex);
+                }
+
+                logger.LogWarning($"Short code collision occured. Retrying... (Attempt {attemp+1} of {MaxRetries})");
+            }
+        }
+
+        throw new InvalidOperationException("Failed to generate unique short code");
+    }
+
+    private static string GenerateRandomCode()
+    {
+        RandomNumberGenerator rng = RandomNumberGenerator.Create();
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        const int length = 7;
+
+        var bytes = new byte[length];
+        rng.GetBytes(bytes);
+
+        char[] result = new char[length];
+
+        for (int i = 0; i < length; i++)
+        {
+            result[i] = chars[bytes[i] % chars.Length];
+        }
+
+        return new string(result);
     }
 }

@@ -5,7 +5,7 @@ namespace UrlShortner.Api.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-internal class UrlsController(IUrlShortnerService urlShortnerService, ILogger<UrlsController> logger) : ControllerBase
+public class UrlsController(IUrlShortnerService urlShortnerService, ILogger<UrlsController> logger) : ControllerBase
 {
     [HttpPost]
     [Route("shorten")]
@@ -30,7 +30,7 @@ internal class UrlsController(IUrlShortnerService urlShortnerService, ILogger<Ur
     }
 
     [HttpGet]
-    [Route("{shortcode:string}")]
+    [Route("{shortcode}")]
     public async Task<IResult> Get([FromRoute] string shortcode)
     {
         try

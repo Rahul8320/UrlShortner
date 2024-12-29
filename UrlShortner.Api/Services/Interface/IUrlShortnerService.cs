@@ -2,7 +2,7 @@
 
 namespace UrlShortner.Api.Services.Interface;
 
-internal interface IUrlShortnerService
+public interface IUrlShortnerService
 {
     Task<string> ShortenUrl(string originalUrl);
     Task<string?> GetOriginalUrl(string shortCode);
